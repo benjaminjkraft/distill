@@ -11,9 +11,9 @@ import qualified Data.Text.Lazy.IO as TL
 import Data.Time.Clock
 import Text.XML as XML
 
-import Language.Google.Search.Simple as Search
-import Language.Google.Search.Mail as Search
-import Data.Google.Mail.Filters as Filters
+import Language.Google.Search.Simple
+import Language.Google.Search.Mail
+import Data.Google.Mail.Filters
 
 deriving instance Eq t => Eq (Term t)
 deriving instance Eq t => Eq (BooleanF t)
@@ -71,7 +71,7 @@ renderFilters path name email filters = do
     now <- getCurrentTime
     let writer = maybe TL.putStrLn TL.writeFile path
     writer . XML.renderText def {rsPretty = True} $
-        Filters.toXML now (name, email) filters
+        toXML now (name, email) filters
 
 deferenceFilters :: Filter -> [Filter]
 deferenceFilters (Filter actions search) = [Filter action search | action <- deferenceActions actions] --may create one more filter than necessary
@@ -94,3 +94,6 @@ includeParehtsAction action = action
 
 parents :: T.Text -> [T.Text]
 parents path = map (T.intercalate "/") $ tail $ inits $ T.split (=='/') path
+
+masterFilter :: T.Text -> T.Text -> [Mail] -> [Filter]
+masterFilter listname path excludes = Filter [LabelAs path] $ pure (To listname) /\ notB excludes
