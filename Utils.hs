@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
+module Utils where
+
 import Control.Applicative
 import Data.List
 import Data.List.Split
@@ -90,13 +92,20 @@ includeParents (Filter actions search) = Filter (concatMap includeParentsAction 
 
 includeParentsAction :: Action -> [Action]
 includeParentsAction (LabelAs path) = map LabelAs $ parents path
-includeParehtsAction action = action
+includeParentsAction action = [action]
 
 parents :: T.Text -> [T.Text]
 parents path = map (T.intercalate "/") $ tail $ inits $ T.split (=='/') path
 
-masterFilter :: Simple -> T.Text -> [Mail] -> [Filter]
-masterFilter listname path excludes = deferenceFilter $ includeParents $ Filter [LabelAs path] search
-  where search = if null excludes
-                   then pure $ To listname
-                   else (pure $ To listname) /\ (notB $ orB excludes) -- uugh, orB [] errors...
+groupFilters :: T.Text -> [T.Text] -> [(T.Text,[T.Text])] -> [Filter]
+groupFilters path domains lists = do
+    group <- lists
+    let path' = path `T.append` "/" `T.append` fst group
+        lists = concatMap (\x -> map (pure . To . specialAppend x) domains) $ snd group
+    deferenceFilter $ includeParents $ Filter [LabelAs path'] $ orB lists
+
+specialAppend :: T.Text -> T.Text -> Simple
+specialAppend x = pure . Fuzzy . T.append x
+
+toListFilter :: [T.Text] -> [T.Text] -> Mail
+toListFilter list domains = pure $ To $ orB $ [specialAppend l d | l <- list, d <- domains]
