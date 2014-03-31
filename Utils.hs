@@ -100,7 +100,7 @@ parents path = map (T.intercalate "/") $ tail $ inits $ T.split (=='/') path
 groupFilters :: T.Text -> [T.Text] -> [(T.Text,[T.Text])] -> [Filter]
 groupFilters path domains lists = do
     group <- lists
-    let path' = path `T.append` "/" `T.append` fst group
+    let path' = if T.null (fst group) then path else path `T.append` "/" `T.append` fst group
         lists = concatMap (\x -> map (pure . To . specialAppend x) domains) $ snd group
     deferenceFilter $ includeParents $ Filter [LabelAs path'] $ orB lists
 
